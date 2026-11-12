@@ -158,6 +158,39 @@ def create_server(client: ObisClient | None = None) -> MCPServer:
         except ObisError as exc:
             return {"error": str(exc), "summary": f"Depth profile lookup failed: {exc}"}
 
+    @server.tool()
+    def get_marine_environmental_parameters(
+        scientific_name: str, aphia_id: int | None = None
+    ) -> dict[str, Any]:
+        """Extract ocean salinity, water temperature, and dissolved oxygen profiles."""
+        try:
+            env = api.get_marine_environmental_parameters(
+                scientific_name=scientific_name, aphia_id=aphia_id
+            )
+            t = env.get("temperature_celsius", {})
+            s = env.get("salinity_psu", {})
+            summary = (
+                f"Environmental parameters for {scientific_name}: "
+                f"SST {t.get('min')}°C to {t.get('max')}°C (mean {t.get('mean')}°C) | "
+                f"Salinity {s.get('min')} to {s.get('max')} PSU (mean {s.get('mean')} PSU)"
+            )
+            return {"environmental_parameters": env, "summary": summary}
+        except ObisError as exc:
+            return {"error": str(exc), "summary": f"Environmental lookup failed: {exc}"}
+
+    @server.tool()
+    def get_ocean_area_statistics(area_name: str) -> dict[str, Any]:
+        """Retrieve marine biodiversity statistics and occurrence totals for an oceanic basin."""
+        try:
+            stats = api.get_ocean_area_statistics(area_name=area_name)
+            name = stats.get("area_name", area_name)
+            sp = stats.get("species_count") or stats.get("total_species", "N/A")
+            occ = stats.get("total_occurrences") or stats.get("total_records", "N/A")
+            summary = f"Ocean Area: {name} | Species Richness: {sp:,} | Total Occurrences: {occ:,}"
+            return {"statistics": stats, "summary": summary}
+        except ObisError as exc:
+            return {"error": str(exc), "summary": f"Ocean area query failed: {exc}"}
+
     return server
 
 

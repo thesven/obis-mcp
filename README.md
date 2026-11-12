@@ -27,6 +27,8 @@ Fills the oceanic and pelagic data gap in terrestrial biodiversity collections (
 | :--- | :--- |
 | `get_marine_taxon` | Look up WoRMS AphiaID and marine taxonomic classification for a species. |
 | `get_marine_depth_profile` | Classify marine occurrences across oceanic bathymetric zones (0-200m, 200-1000m). |
+| `get_marine_environmental_parameters` | Extract ocean salinity, water temperature, and dissolved oxygen profiles for a marine taxon. |
+| `get_ocean_area_statistics` | Retrieve marine biodiversity statistics and occurrence totals for an oceanic basin or MPA. |
 | `search_marine_occurrences` | Search ocean species occurrences with depth bounds and taxonomic filters. |
 | `marine_occurrences_nearby` | Search marine records within a spatial polygon around ocean GPS coordinates. |
 | `get_marine_checklist` | Retrieve a checklist of marine species observed around oceanic coordinates. |

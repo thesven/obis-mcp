@@ -3,7 +3,7 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from obis_mcp.client import ObisClient
+from obis_mcp.client import ObisClient, ObisError
 from obis_mcp.server import create_server
 
 
@@ -78,6 +78,8 @@ async def test_server_tools(mock_client: ObisClient) -> None:
     assert "marine_occurrences_nearby" in tool_names
     assert "get_marine_checklist" in tool_names
     assert "get_marine_depth_profile" in tool_names
+    assert "get_marine_environmental_parameters" in tool_names
+    assert "get_ocean_area_statistics" in tool_names
 
     res = await server.call_tool("get_marine_taxon", {"scientific_name": "Balaenoptera musculus"})
     assert "Balaenoptera musculus" in res.content[0].text
@@ -102,6 +104,14 @@ async def test_server_tools(mock_client: ObisClient) -> None:
     )
     assert "Depth profile" in res.content[0].text
 
+    res = await server.call_tool(
+        "get_marine_environmental_parameters", {"scientific_name": "Balaenoptera musculus"}
+    )
+    assert "Environmental parameters" in res.content[0].text
+
+    res = await server.call_tool("get_ocean_area_statistics", {"area_name": "North Atlantic"})
+    assert "North Atlantic" in res.content[0].text
+
 
 @pytest.mark.asyncio
 async def test_server_tool_errors(failing_client: ObisClient) -> None:
@@ -115,7 +125,40 @@ async def test_server_tool_errors(failing_client: ObisClient) -> None:
     )
     assert "failed" in res.content[0].text
 
-    res = await server.call_tool(
-        "get_marine_depth_profile", {"scientific_name": "NonexistentUnknownFish"}
+    # Also test error handling when client methods raise ObisError directly
+    class RaisingClient(ObisClient):
+        def marine_occurrences_nearby(self, *args, **kwargs):
+            raise ObisError("Nearby failed")
+
+        def get_marine_checklist(self, *args, **kwargs):
+            raise ObisError("Checklist failed")
+
+        def get_marine_depth_profile(self, *args, **kwargs):
+            raise ObisError("Depth failed")
+
+        def get_marine_environmental_parameters(self, *args, **kwargs):
+            raise ObisError("Env failed")
+
+        def get_ocean_area_statistics(self, *args, **kwargs):
+            raise ObisError("Area failed")
+
+    raising_server = create_server(
+        RaisingClient(transport=httpx.MockTransport(lambda r: httpx.Response(500)))
     )
-    assert "Depth profile" in res.content[0].text or "failed" in res.content[0].text
+
+    res = await raising_server.call_tool("marine_occurrences_nearby", {"lat": 0, "lon": 0})
+    assert "failed" in res.content[0].text
+
+    res = await raising_server.call_tool("get_marine_checklist", {"lat": 0, "lon": 0})
+    assert "failed" in res.content[0].text
+
+    res = await raising_server.call_tool("get_marine_depth_profile", {"scientific_name": "Bad"})
+    assert "failed" in res.content[0].text
+
+    res = await raising_server.call_tool(
+        "get_marine_environmental_parameters", {"scientific_name": "Bad"}
+    )
+    assert "failed" in res.content[0].text
+
+    res = await raising_server.call_tool("get_ocean_area_statistics", {"area_name": "Bad"})
+    assert "failed" in res.content[0].text

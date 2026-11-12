@@ -77,6 +77,8 @@ async def main() -> None:
                 "marine_occurrences_nearby",
                 "get_marine_checklist",
                 "get_marine_depth_profile",
+                "get_marine_environmental_parameters",
+                "get_ocean_area_statistics",
             }
             missing = expected_tools - tool_names
             assert expected_tools.issubset(tool_names), f"Missing tools: {missing}"

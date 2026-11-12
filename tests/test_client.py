@@ -140,7 +140,7 @@ def test_get_marine_checklist_api() -> None:
 
 def test_get_marine_depth_profile() -> None:
     # 1. Fallback depth profile
-    client_fallback = ObisClient()
+    client_fallback = ObisClient(transport=httpx.MockTransport(lambda req: httpx.Response(500)))
     prof_fallback = client_fallback.get_marine_depth_profile("Balaenoptera musculus")
     assert prof_fallback["primary_zone"] in ["epipelagic", "mesopelagic"]
     assert prof_fallback["samples_analyzed"] >= 1
@@ -181,3 +181,40 @@ def test_error_handling() -> None:
     client2 = ObisClient(transport=httpx.MockTransport(handler_bad_json))
     with pytest.raises(ObisError, match="Invalid JSON"):
         client2.search_marine_occurrences("NonexistentSpeciesX")
+
+
+def test_marine_environmental_parameters_and_area() -> None:
+    client = ObisClient(transport=httpx.MockTransport(lambda req: httpx.Response(500)))
+
+    # Environmental parameters fallback
+    env = client.get_marine_environmental_parameters("Balaenoptera musculus")
+    assert env["temperature_celsius"]["mean"] == 12.5
+    assert env["salinity_psu"]["mean"] == 34.8
+
+    # Ocean area statistics fallback
+    area = client.get_ocean_area_statistics("North Atlantic")
+    assert area["area_name"] == "North Atlantic Ocean"
+    assert area["species_count"] > 30000
+
+    # API response for environmental parameters
+    def handler(request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        if "/area/" in path:
+            return httpx.Response(
+                200,
+                json={"results": [{"records": 1000000, "species": 5000, "maxdepth": 3500}]},
+            )
+        if "/occurrence" in path:
+            return httpx.Response(
+                200,
+                json={"results": [{"sst": 18.5, "sss": 35.2}, {"sst": 20.1, "sss": 35.8}]},
+            )
+        return httpx.Response(404)
+
+    api_client = ObisClient(transport=httpx.MockTransport(handler))
+    env_api = api_client.get_marine_environmental_parameters("Orcinus orca", aphia_id=137090)
+    assert env_api["temperature_celsius"]["min"] == 18.5
+    assert env_api["salinity_psu"]["max"] == 35.8
+
+    area_api = api_client.get_ocean_area_statistics("SpecialMarineReserve")
+    assert area_api["total_records"] == 1000000
