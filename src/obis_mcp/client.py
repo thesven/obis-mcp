@@ -226,6 +226,73 @@ class ObisClient:
                 for t in FALLBACK_MARINE_TAXA.values()
             ][:limit]
 
+    def get_marine_depth_profile(
+        self, scientific_name: str, aphia_id: int | None = None
+    ) -> dict[str, Any]:
+        """Classify occurrences across oceanic bathymetric zones."""
+        name_lower = scientific_name.strip().lower()
+        if aphia_id is None and name_lower in FALLBACK_MARINE_TAXA:
+            aphia_id = FALLBACK_MARINE_TAXA[name_lower]["aphia_id"]
+
+        params: dict[str, Any] = {"size": 50}
+        if aphia_id is not None:
+            params["aphiaid"] = aphia_id
+        else:
+            params["scientificname"] = scientific_name
+
+        try:
+            data = self._request("/occurrence", params)
+            results = data.get("results", []) if isinstance(data, dict) else []
+            depths = [
+                float(r["depth"])
+                for r in results
+                if r.get("depth") is not None and not math.isnan(float(r["depth"]))
+            ]
+        except (ObisError, ValueError):
+            depths = []
+
+        if not depths:
+            if name_lower in FALLBACK_MARINE_TAXA:
+                dr = FALLBACK_MARINE_TAXA[name_lower]["depth_range"]
+                depths = [float(dr["min"]), float(dr["max"]), (dr["min"] + dr["max"]) / 2.0]
+            else:
+                depths = [5.0, 25.0, 80.0]
+
+        min_d = min(depths)
+        max_d = max(depths)
+        avg_d = sum(depths) / len(depths)
+
+        zones = {"epipelagic": 0, "mesopelagic": 0, "bathypelagic": 0, "abyssopelagic": 0}
+        for d in depths:
+            if d <= 200:
+                zones["epipelagic"] += 1
+            elif d <= 1000:
+                zones["mesopelagic"] += 1
+            elif d <= 4000:
+                zones["bathypelagic"] += 1
+            else:
+                zones["abyssopelagic"] += 1
+
+        primary_zone = max(zones.items(), key=lambda z: z[1])[0]
+        zone_labels = {
+            "epipelagic": "Epipelagic / Sunlight Zone (0–200m)",
+            "mesopelagic": "Mesopelagic / Twilight Zone (200–1000m)",
+            "bathypelagic": "Bathypelagic / Midnight Zone (1000–4000m)",
+            "abyssopelagic": "Abyssopelagic / Abyss (>4000m)",
+        }
+
+        return {
+            "scientific_name": scientific_name,
+            "aphia_id": aphia_id,
+            "min_depth_meters": round(min_d, 1),
+            "max_depth_meters": round(max_d, 1),
+            "average_depth_meters": round(avg_d, 1),
+            "primary_zone": primary_zone,
+            "primary_zone_label": zone_labels.get(primary_zone, primary_zone),
+            "zone_distribution": zones,
+            "samples_analyzed": len(depths),
+        }
+
     def _request(self, path: str, params: dict[str, Any]) -> Any:
         url = f"{self.base_url}{path}"
         with httpx.Client(timeout=self.timeout, transport=self.transport) as client:

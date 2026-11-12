@@ -140,6 +140,24 @@ def create_server(client: ObisClient | None = None) -> MCPServer:
                 "summary": f"Checklist lookup failed: {exc}",
             }
 
+    @server.tool()
+    def get_marine_depth_profile(
+        scientific_name: str, aphia_id: int | None = None
+    ) -> dict[str, Any]:
+        """Classify marine occurrences across oceanic bathymetric zones (0-200m, 200-1000m)."""
+        try:
+            profile = api.get_marine_depth_profile(
+                scientific_name=scientific_name, aphia_id=aphia_id
+            )
+            summary = (
+                f"Depth profile for {scientific_name}: {profile.get('min_depth_meters')}m to "
+                f"{profile.get('max_depth_meters')}m depth "
+                f"(Primary zone: {profile.get('primary_zone_label')})"
+            )
+            return {"depth_profile": profile, "summary": summary}
+        except ObisError as exc:
+            return {"error": str(exc), "summary": f"Depth profile lookup failed: {exc}"}
+
     return server
 
 

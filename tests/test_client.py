@@ -138,6 +138,35 @@ def test_get_marine_checklist_api() -> None:
     assert checklist[0]["scientific_name"] == "Balaenoptera musculus"
 
 
+def test_get_marine_depth_profile() -> None:
+    # 1. Fallback depth profile
+    client_fallback = ObisClient()
+    prof_fallback = client_fallback.get_marine_depth_profile("Balaenoptera musculus")
+    assert prof_fallback["primary_zone"] in ["epipelagic", "mesopelagic"]
+    assert prof_fallback["samples_analyzed"] >= 1
+
+    # 2. Mock API depth profile
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/v3/occurrence"
+        return httpx.Response(
+            200,
+            json={
+                "results": [
+                    {"depth": 25.0},
+                    {"depth": 50.0},
+                    {"depth": 150.0},
+                ]
+            },
+        )
+
+    transport = httpx.MockTransport(handler)
+    client_api = ObisClient(transport=transport)
+    prof_api = client_api.get_marine_depth_profile("Sample Fish", aphia_id=999)
+    assert prof_api["primary_zone"] == "epipelagic"
+    assert prof_api["min_depth_meters"] == 25.0
+    assert prof_api["max_depth_meters"] == 150.0
+
+
 def test_error_handling() -> None:
     def handler_500(request: httpx.Request) -> httpx.Response:
         return httpx.Response(500, text="OBIS Server Error")

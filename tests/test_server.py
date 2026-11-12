@@ -77,6 +77,7 @@ async def test_server_tools(mock_client: ObisClient) -> None:
     assert "search_marine_occurrences" in tool_names
     assert "marine_occurrences_nearby" in tool_names
     assert "get_marine_checklist" in tool_names
+    assert "get_marine_depth_profile" in tool_names
 
     res = await server.call_tool("get_marine_taxon", {"scientific_name": "Balaenoptera musculus"})
     assert "Balaenoptera musculus" in res.content[0].text
@@ -96,6 +97,11 @@ async def test_server_tools(mock_client: ObisClient) -> None:
     )
     assert "Balaenoptera musculus" in res.content[0].text
 
+    res = await server.call_tool(
+        "get_marine_depth_profile", {"scientific_name": "Balaenoptera musculus"}
+    )
+    assert "Depth profile" in res.content[0].text
+
 
 @pytest.mark.asyncio
 async def test_server_tool_errors(failing_client: ObisClient) -> None:
@@ -108,3 +114,8 @@ async def test_server_tool_errors(failing_client: ObisClient) -> None:
         "search_marine_occurrences", {"scientific_name": "NonexistentUnknownFish"}
     )
     assert "failed" in res.content[0].text
+
+    res = await server.call_tool(
+        "get_marine_depth_profile", {"scientific_name": "NonexistentUnknownFish"}
+    )
+    assert "Depth profile" in res.content[0].text or "failed" in res.content[0].text

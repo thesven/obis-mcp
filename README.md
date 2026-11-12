@@ -12,6 +12,7 @@ Fills the oceanic and pelagic data gap in terrestrial biodiversity collections (
 
 ## Key Features
 
+- **Bathymetric Depth Profiling**: Classifies species observations across sunlight (epipelagic 0–200m), twilight (mesopelagic 200–1000m), and midnight (bathypelagic >1000m) oceanic zones.
 - **Ocean Depth & Bathymetric Filtering**: Query occurrences constrained by water column depth (`min_depth` and `max_depth` in meters), differentiating epipelagic, mesopelagic, bathypelagic, and benthic habitats.
 - **WoRMS Taxonomic Authority**: Resolve marine species names to official World Register of Marine Species (WoRMS) AphiaIDs and verify marine status.
 - **Geographic Ocean Boundaries**: Query marine biodiversity around offshore coordinates, marine protected areas, and coral reef ecosystems using polygon spatial filters.
@@ -25,6 +26,7 @@ Fills the oceanic and pelagic data gap in terrestrial biodiversity collections (
 | Tool | Description |
 | :--- | :--- |
 | `get_marine_taxon` | Look up WoRMS AphiaID and marine taxonomic classification for a species. |
+| `get_marine_depth_profile` | Classify marine occurrences across oceanic bathymetric zones (0-200m, 200-1000m). |
 | `search_marine_occurrences` | Search ocean species occurrences with depth bounds and taxonomic filters. |
 | `marine_occurrences_nearby` | Search marine records within a spatial polygon around ocean GPS coordinates. |
 | `get_marine_checklist` | Retrieve a checklist of marine species observed around oceanic coordinates. |
